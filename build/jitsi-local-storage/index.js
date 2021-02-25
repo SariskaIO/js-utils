@@ -1,119 +1,232 @@
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.jitsiLocalStorage = void 0;
-var events_1 = require("events");
-var DummyLocalStorage = (function (_super) {
-    __extends(DummyLocalStorage, _super);
-    function DummyLocalStorage() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._storage = {};
-        return _this;
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+import EventEmitter from 'events';
+/**
+ * Dummy implementation of Storage interface.
+ */
+
+class DummyLocalStorage extends EventEmitter {
+  constructor(...args) {
+    super(...args);
+
+    _defineProperty(this, "_storage", {});
+  }
+
+  /**
+   * Empties all keys out of the storage.
+   *
+   * @returns {void}
+   */
+  clear() {
+    this._storage = {};
+  }
+  /**
+   * Returns the number of data items stored in the Storage object.
+   *
+   * @returns {number} - The number of data items stored in the Storage object.
+   */
+
+
+  get length() {
+    return Object.keys(this._storage).length;
+  }
+  /**
+   * Will return that key's value associated to the passed key name.
+   *
+   * @param {string} keyName - The key name.
+   * @returns {*} - The key value.
+   */
+
+
+  getItem(keyName) {
+    return this._storage[keyName];
+  }
+  /**
+   * When passed a key name and value, will add that key to the storage,
+   * or update that key's value if it already exists.
+   *
+   * @param {string} keyName - The key name.
+   * @param {*} keyValue - The key value.
+   * @returns {void}
+   */
+
+
+  setItem(keyName, keyValue) {
+    this._storage[keyName] = keyValue;
+  }
+  /**
+   * When passed a key name, will remove that key from the storage.
+   *
+   * @param {string} keyName - The key name.
+   * @returns {void}
+   */
+
+
+  removeItem(keyName) {
+    delete this._storage[keyName];
+  }
+  /**
+   * When passed a number n, this method will return the name of the nth key in the storage.
+   *
+   * @param {number} idx - The index of the key.
+   * @returns {string} - The nth key name.
+   */
+
+
+  key(n) {
+    const keys = Object.keys(this._storage);
+
+    if (keys.length <= n) {
+      return undefined;
     }
-    DummyLocalStorage.prototype.clear = function () {
-        this._storage = {};
-    };
-    Object.defineProperty(DummyLocalStorage.prototype, "length", {
-        get: function () {
-            return Object.keys(this._storage).length;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    DummyLocalStorage.prototype.getItem = function (keyName) {
-        return this._storage[keyName];
-    };
-    DummyLocalStorage.prototype.setItem = function (keyName, keyValue) {
-        this._storage[keyName] = keyValue;
-    };
-    DummyLocalStorage.prototype.removeItem = function (keyName) {
-        delete this._storage[keyName];
-    };
-    DummyLocalStorage.prototype.key = function (n) {
-        var keys = Object.keys(this._storage);
-        if (keys.length <= n) {
-            return undefined;
-        }
-        return keys[n];
-    };
-    DummyLocalStorage.prototype.serialize = function () {
-        return JSON.stringify(this._storage);
-    };
-    return DummyLocalStorage;
-}(events_1.default));
-var JitsiLocalStorage = (function (_super) {
-    __extends(JitsiLocalStorage, _super);
-    function JitsiLocalStorage() {
-        var _this = _super.call(this) || this;
-        try {
-            _this._storage = window.localStorage;
-            _this._localStorageDisabled = false;
-        }
-        catch (ignore) {
-        }
-        if (!_this._storage) {
-            console.warn('Local storage is disabled.');
-            _this._storage = new DummyLocalStorage();
-            _this._localStorageDisabled = true;
-        }
-        return _this;
+
+    return keys[n];
+  }
+  /**
+   * Serializes the content of the storage.
+   *
+   * @returns {string} - The serialized content.
+   */
+
+
+  serialize() {
+    return JSON.stringify(this._storage);
+  }
+
+}
+/**
+ * Wrapper class for browser's local storage object.
+ */
+
+
+class JitsiLocalStorage extends EventEmitter {
+  /**
+   * @constructor
+   * @param {Storage} storage browser's local storage object.
+   */
+  constructor() {
+    super();
+
+    try {
+      this._storage = window.localStorage;
+      this._localStorageDisabled = false;
+    } catch (ignore) {// localStorage throws an exception.
     }
-    JitsiLocalStorage.prototype.isLocalStorageDisabled = function () {
-        return this._localStorageDisabled;
-    };
-    JitsiLocalStorage.prototype.clear = function () {
-        this._storage.clear();
-        this.emit('changed');
-    };
-    Object.defineProperty(JitsiLocalStorage.prototype, "length", {
-        get: function () {
-            return this._storage.length;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    JitsiLocalStorage.prototype.getItem = function (keyName) {
-        return this._storage.getItem(keyName);
-    };
-    JitsiLocalStorage.prototype.setItem = function (keyName, keyValue, dontEmitChangedEvent) {
-        if (dontEmitChangedEvent === void 0) { dontEmitChangedEvent = false; }
-        this._storage.setItem(keyName, keyValue);
-        if (!dontEmitChangedEvent) {
-            this.emit('changed');
-        }
-    };
-    JitsiLocalStorage.prototype.removeItem = function (keyName) {
-        this._storage.removeItem(keyName);
-        this.emit('changed');
-    };
-    JitsiLocalStorage.prototype.key = function (i) {
-        return this._storage.key(i);
-    };
-    JitsiLocalStorage.prototype.serialize = function () {
-        if (this.isLocalStorageDisabled()) {
-            return this._storage.serialize();
-        }
-        var length = this._storage.length;
-        var localStorageContent = {};
-        for (var i = 0; i < length; i++) {
-            var key = this._storage.key(i);
-            localStorageContent[key] = this._storage.getItem(key);
-        }
-        return JSON.stringify(localStorageContent);
-    };
-    return JitsiLocalStorage;
-}(events_1.default));
-exports.jitsiLocalStorage = new JitsiLocalStorage();
-//# sourceMappingURL=index.js.map
+
+    if (!this._storage) {
+      // Handles the case when window.localStorage is undefined or throws an exception.
+      console.warn('Local storage is disabled.');
+      this._storage = new DummyLocalStorage();
+      this._localStorageDisabled = true;
+    }
+  }
+  /**
+   * Returns true if window.localStorage is disabled and false otherwise.
+   *
+   * @returns {boolean} - True if window.localStorage is disabled and false otherwise.
+   */
+
+
+  isLocalStorageDisabled() {
+    return this._localStorageDisabled;
+  }
+  /**
+   * Empties all keys out of the storage.
+   *
+   * @returns {void}
+   */
+
+
+  clear() {
+    this._storage.clear();
+
+    this.emit('changed');
+  }
+  /**
+   * Returns the number of data items stored in the Storage object.
+   *
+   * @returns {number} - The number of data items stored in the Storage object.
+   */
+
+
+  get length() {
+    return this._storage.length;
+  }
+  /**
+   * Returns that passed key's value.
+   * @param {string} keyName the name of the key you want to retrieve
+   * the value of.
+   * @returns {String|null} the value of the key. If the key does not exist,
+   * null is returned.
+   */
+
+
+  getItem(keyName) {
+    return this._storage.getItem(keyName);
+  }
+  /**
+   * Adds a key to the storage, or update key's value if it already exists.
+   * @param {string} keyName - the name of the key you want to create/update.
+   * @param {string} keyValue - the value you want to give the key you are
+   * creating/updating.
+   * @param {boolean} dontEmitChangedEvent - If true a changed event won't be emitted.
+   */
+
+
+  setItem(keyName, keyValue, dontEmitChangedEvent = false) {
+    this._storage.setItem(keyName, keyValue);
+
+    if (!dontEmitChangedEvent) {
+      this.emit('changed');
+    }
+  }
+  /**
+   * Remove a key from the storage.
+   * @param {string} keyName the name of the key you want to remove.
+   */
+
+
+  removeItem(keyName) {
+    this._storage.removeItem(keyName);
+
+    this.emit('changed');
+  }
+  /**
+   * Returns the name of the nth key in the list, or null if n is greater
+   * than or equal to the number of key/value pairs in the object.
+   *
+   * @param {number} i - The index of the key in the list.
+   * @returns {string}
+   */
+
+
+  key(i) {
+    return this._storage.key(i);
+  }
+  /**
+   * Serializes the content of the storage.
+   *
+   * @returns {string} - The serialized content.
+   */
+
+
+  serialize() {
+    if (this.isLocalStorageDisabled()) {
+      return this._storage.serialize();
+    }
+
+    const length = this._storage.length;
+    const localStorageContent = {};
+
+    for (let i = 0; i < length; i++) {
+      const key = this._storage.key(i);
+
+      localStorageContent[key] = this._storage.getItem(key);
+    }
+
+    return JSON.stringify(localStorageContent);
+  }
+
+}
+
+export const jitsiLocalStorage = new JitsiLocalStorage();

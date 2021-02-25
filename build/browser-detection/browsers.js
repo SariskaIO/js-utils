@@ -1,13 +1,12 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.UNKNOWN = exports.REACT_NATIVE = exports.ELECTRON = exports.NWJS = exports.SAFARI = exports.INTERNET_EXPLORER = exports.FIREFOX = exports.OPERA = exports.CHROME = void 0;
-exports.CHROME = 'chrome';
-exports.OPERA = 'opera';
-exports.FIREFOX = 'firefox';
-exports.INTERNET_EXPLORER = 'iexplorer';
-exports.SAFARI = 'safari';
-exports.NWJS = 'nwjs';
-exports.ELECTRON = 'electron';
-exports.REACT_NATIVE = 'react-native';
-exports.UNKNOWN = 'unknown';
-//# sourceMappingURL=browsers.js.map
+// TODO: Maybe fix the values to 'Chrome', 'Internet Explorer', etc. Currently
+// this values needs to be as they are becuse they are going to analytics,
+// callstats, etc.
+export const CHROME = 'chrome';
+export const OPERA = 'opera';
+export const FIREFOX = 'firefox';
+export const INTERNET_EXPLORER = 'iexplorer';
+export const SAFARI = 'safari';
+export const NWJS = 'nwjs';
+export const ELECTRON = 'electron';
+export const REACT_NATIVE = 'react-native';
+export const UNKNOWN = 'unknown';

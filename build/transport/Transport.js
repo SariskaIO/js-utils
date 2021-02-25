@@ -1,143 +1,284 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-var constants_1 = require("./constants");
-var Transport = (function () {
-    function Transport(_a) {
-        var backend = (_a === void 0 ? {} : _a).backend;
-        this._listeners = new Map();
-        this._requestID = 0;
-        this._responseHandlers = new Map();
-        this._unprocessedMessages = new Set();
-        this.addListener = this.on;
-        if (backend) {
-            this.setBackend(backend);
-        }
+import { MESSAGE_TYPE_EVENT, MESSAGE_TYPE_REQUEST, MESSAGE_TYPE_RESPONSE } from './constants';
+/**
+* Stores the currnet transport backend that have to be used. Also implements
+* request/response mechanism.
+*/
+
+export default class Transport {
+  /**
+   * Creates new instance.
+   *
+   * @param {Object} options - Optional parameters for configuration of the
+   * transport backend.
+   */
+  constructor({
+    backend
+  } = {}) {
+    /**
+     * Maps an event name and listener that have been added to the Transport
+     * instance.
+     *
+     * @type {Map<string, Function>}
+     */
+    this._listeners = new Map();
+    /**
+     * The request ID counter used for the id property of the request. This
+     * property is used to match the responses with the request.
+     *
+     * @type {number}
+     */
+
+    this._requestID = 0;
+    /**
+     * Maps an IDs of the requests and handlers that will process the
+     * responses of those requests.
+     *
+     * @type {Map<number, Function>}
+     */
+
+    this._responseHandlers = new Map();
+    /**
+     * A set with the events and requests that were received but not
+     * processed by any listener. They are later passed on every new
+     * listener until they are processed.
+     *
+     * @type {Set<Object>}
+     */
+
+    this._unprocessedMessages = new Set();
+    /**
+     * Alias.
+     */
+
+    this.addListener = this.on;
+
+    if (backend) {
+      this.setBackend(backend);
     }
-    Transport.prototype._disposeBackend = function () {
-        if (this._backend) {
-            this._backend.dispose();
-            this._backend = null;
-        }
-    };
-    Transport.prototype._onMessageReceived = function (message) {
-        var _this = this;
-        if (message.type === constants_1.MESSAGE_TYPE_RESPONSE) {
-            var handler = this._responseHandlers.get(message.id);
-            if (handler) {
-                handler(message);
-                this._responseHandlers.delete(message.id);
-            }
-        }
-        else if (message.type === constants_1.MESSAGE_TYPE_REQUEST) {
-            this.emit('request', message.data, function (result, error) {
-                _this._backend.send({
-                    type: constants_1.MESSAGE_TYPE_RESPONSE,
-                    error: error,
-                    id: message.id,
-                    result: result
-                });
-            });
-        }
-        else {
-            this.emit('event', message.data);
-        }
-    };
-    Transport.prototype.dispose = function () {
-        this._responseHandlers.clear();
-        this._unprocessedMessages.clear();
-        this.removeAllListeners();
-        this._disposeBackend();
-    };
-    Transport.prototype.emit = function (eventName) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var listenersForEvent = this._listeners.get(eventName);
-        var isProcessed = false;
-        if (listenersForEvent && listenersForEvent.size) {
-            listenersForEvent.forEach(function (listener) {
-                isProcessed = listener.apply(void 0, args) || isProcessed;
-            });
-        }
-        if (!isProcessed) {
-            this._unprocessedMessages.add(args);
-        }
-        return isProcessed;
-    };
-    Transport.prototype.on = function (eventName, listener) {
-        var _this = this;
-        var listenersForEvent = this._listeners.get(eventName);
-        if (!listenersForEvent) {
-            listenersForEvent = new Set();
-            this._listeners.set(eventName, listenersForEvent);
-        }
-        listenersForEvent.add(listener);
-        this._unprocessedMessages.forEach(function (args) {
-            if (listener.apply(void 0, args)) {
-                _this._unprocessedMessages.delete(args);
-            }
+  }
+  /**
+   * Disposes the current transport backend.
+   *
+   * @returns {void}
+   */
+
+
+  _disposeBackend() {
+    if (this._backend) {
+      this._backend.dispose();
+
+      this._backend = null;
+    }
+  }
+  /**
+   * Handles incoming messages from the transport backend.
+   *
+   * @param {Object} message - The message.
+   * @returns {void}
+   */
+
+
+  _onMessageReceived(message) {
+    if (message.type === MESSAGE_TYPE_RESPONSE) {
+      const handler = this._responseHandlers.get(message.id);
+
+      if (handler) {
+        handler(message);
+
+        this._responseHandlers.delete(message.id);
+      }
+    } else if (message.type === MESSAGE_TYPE_REQUEST) {
+      this.emit('request', message.data, (result, error) => {
+        this._backend.send({
+          type: MESSAGE_TYPE_RESPONSE,
+          error,
+          id: message.id,
+          result
         });
-        return this;
-    };
-    Transport.prototype.removeAllListeners = function (eventName) {
-        if (eventName) {
-            this._listeners.delete(eventName);
+      });
+    } else {
+      this.emit('event', message.data);
+    }
+  }
+  /**
+   * Disposes the allocated resources.
+   *
+   * @returns {void}
+   */
+
+
+  dispose() {
+    this._responseHandlers.clear();
+
+    this._unprocessedMessages.clear();
+
+    this.removeAllListeners();
+
+    this._disposeBackend();
+  }
+  /**
+   * Calls each of the listeners registered for the event named eventName, in
+   * the order they were registered, passing the supplied arguments to each.
+   *
+   * @param {string} eventName -  The name of the event.
+   * @returns {boolean} True if the event has been processed by any listener,
+   * false otherwise.
+   */
+
+
+  emit(eventName, ...args) {
+    const listenersForEvent = this._listeners.get(eventName);
+
+    let isProcessed = false;
+
+    if (listenersForEvent && listenersForEvent.size) {
+      listenersForEvent.forEach(listener => {
+        isProcessed = listener(...args) || isProcessed;
+      });
+    }
+
+    if (!isProcessed) {
+      this._unprocessedMessages.add(args);
+    }
+
+    return isProcessed;
+  }
+  /**
+   * Adds the listener function to the listeners collection for the event
+   * named eventName.
+   *
+   * @param {string} eventName -  The name of the event.
+   * @param {Function} listener - The listener that will be added.
+   * @returns {Transport} References to the instance of Transport class, so
+   * that calls can be chained.
+   */
+
+
+  on(eventName, listener) {
+    let listenersForEvent = this._listeners.get(eventName);
+
+    if (!listenersForEvent) {
+      listenersForEvent = new Set();
+
+      this._listeners.set(eventName, listenersForEvent);
+    }
+
+    listenersForEvent.add(listener);
+
+    this._unprocessedMessages.forEach(args => {
+      if (listener(...args)) {
+        this._unprocessedMessages.delete(args);
+      }
+    });
+
+    return this;
+  }
+  /**
+   * Removes all listeners, or those of the specified eventName.
+   *
+   * @param {string} [eventName] - The name of the event. If this parameter is
+   * not specified all listeners will be removed.
+   * @returns {Transport} References to the instance of Transport class, so
+   * that calls can be chained.
+   */
+
+
+  removeAllListeners(eventName) {
+    if (eventName) {
+      this._listeners.delete(eventName);
+    } else {
+      this._listeners.clear();
+    }
+
+    return this;
+  }
+  /**
+   * Removes the listener function from the listeners collection for the event
+   * named eventName.
+   *
+   * @param {string} eventName -  The name of the event.
+   * @param {Function} listener - The listener that will be removed.
+   * @returns {Transport} References to the instance of Transport class, so
+   * that calls can be chained.
+   */
+
+
+  removeListener(eventName, listener) {
+    const listenersForEvent = this._listeners.get(eventName);
+
+    if (listenersForEvent) {
+      listenersForEvent.delete(listener);
+    }
+
+    return this;
+  }
+  /**
+   * Sends the passed event.
+   *
+   * @param {Object} event - The event to be sent.
+   * @returns {void}
+   */
+
+
+  sendEvent(event = {}) {
+    if (this._backend) {
+      this._backend.send({
+        type: MESSAGE_TYPE_EVENT,
+        data: event
+      });
+    }
+  }
+  /**
+   * Sending request.
+   *
+   * @param {Object} request - The request to be sent.
+   * @returns {Promise}
+   */
+
+
+  sendRequest(request) {
+    if (!this._backend) {
+      return Promise.reject(new Error('No transport backend defined!'));
+    }
+
+    this._requestID++;
+    const id = this._requestID;
+    return new Promise((resolve, reject) => {
+      this._responseHandlers.set(id, ({
+        error,
+        result
+      }) => {
+        if (typeof result !== 'undefined') {
+          resolve(result); // eslint-disable-next-line no-negated-condition
+        } else if (typeof error !== 'undefined') {
+          reject(error);
+        } else {
+          // no response
+          reject(new Error('Unexpected response format!'));
         }
-        else {
-            this._listeners.clear();
-        }
-        return this;
-    };
-    Transport.prototype.removeListener = function (eventName, listener) {
-        var listenersForEvent = this._listeners.get(eventName);
-        if (listenersForEvent) {
-            listenersForEvent.delete(listener);
-        }
-        return this;
-    };
-    Transport.prototype.sendEvent = function (event) {
-        if (event === void 0) { event = {}; }
-        if (this._backend) {
-            this._backend.send({
-                type: constants_1.MESSAGE_TYPE_EVENT,
-                data: event
-            });
-        }
-    };
-    Transport.prototype.sendRequest = function (request) {
-        var _this = this;
-        if (!this._backend) {
-            return Promise.reject(new Error('No transport backend defined!'));
-        }
-        this._requestID++;
-        var id = this._requestID;
-        return new Promise(function (resolve, reject) {
-            _this._responseHandlers.set(id, function (_a) {
-                var error = _a.error, result = _a.result;
-                if (typeof result !== 'undefined') {
-                    resolve(result);
-                }
-                else if (typeof error !== 'undefined') {
-                    reject(error);
-                }
-                else {
-                    reject(new Error('Unexpected response format!'));
-                }
-            });
-            _this._backend.send({
-                type: constants_1.MESSAGE_TYPE_REQUEST,
-                data: request,
-                id: id
-            });
-        });
-    };
-    Transport.prototype.setBackend = function (backend) {
-        this._disposeBackend();
-        this._backend = backend;
-        this._backend.setReceiveCallback(this._onMessageReceived.bind(this));
-    };
-    return Transport;
-}());
-exports.default = Transport;
-//# sourceMappingURL=Transport.js.map
+      });
+
+      this._backend.send({
+        type: MESSAGE_TYPE_REQUEST,
+        data: request,
+        id
+      });
+    });
+  }
+  /**
+   * Changes the current backend transport.
+   *
+   * @param {Object} backend - The new transport backend that will be used.
+   * @returns {void}
+   */
+
+
+  setBackend(backend) {
+    this._disposeBackend();
+
+    this._backend = backend;
+
+    this._backend.setReceiveCallback(this._onMessageReceived.bind(this));
+  }
+
+}

@@ -1,43 +1,79 @@
-"use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
+import Postis from './postis';
+/**
+ * The default options for postis.
+ *
+ * @type {Object}
+ */
+
+const DEFAULT_POSTIS_OPTIONS = {
+  window: window.opener || window.parent
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-var postis_1 = require("./postis");
-var DEFAULT_POSTIS_OPTIONS = {
-    window: window.opener || window.parent
-};
-var POSTIS_METHOD_NAME = 'message';
-var PostMessageTransportBackend = (function () {
-    function PostMessageTransportBackend(_a) {
-        var _this = this;
-        var postisOptions = (_a === void 0 ? {} : _a).postisOptions;
-        this.postis = postis_1.default(__assign(__assign({}, DEFAULT_POSTIS_OPTIONS), postisOptions));
-        this._receiveCallback = function () {
-        };
-        this.postis.listen(POSTIS_METHOD_NAME, function (message) { return _this._receiveCallback(message); });
-    }
-    PostMessageTransportBackend.prototype.dispose = function () {
-        this.postis.destroy();
+/**
+ * The postis method used for all messages.
+ *
+ * @type {string}
+ */
+
+const POSTIS_METHOD_NAME = 'message';
+/**
+ * Implements message transport using the postMessage API.
+ */
+
+export default class PostMessageTransportBackend {
+  /**
+   * Creates new PostMessageTransportBackend instance.
+   *
+   * @param {Object} options - Optional parameters for configuration of the
+   * transport.
+   */
+  constructor({
+    postisOptions
+  } = {}) {
+    // eslint-disable-next-line new-cap
+    this.postis = Postis({ ...DEFAULT_POSTIS_OPTIONS,
+      ...postisOptions
+    });
+
+    this._receiveCallback = () => {// Do nothing until a callback is set by the consumer of
+      // PostMessageTransportBackend via setReceiveCallback.
     };
-    PostMessageTransportBackend.prototype.send = function (message) {
-        this.postis.send({
-            method: POSTIS_METHOD_NAME,
-            params: message
-        });
-    };
-    PostMessageTransportBackend.prototype.setReceiveCallback = function (callback) {
-        this._receiveCallback = callback;
-    };
-    return PostMessageTransportBackend;
-}());
-exports.default = PostMessageTransportBackend;
-//# sourceMappingURL=PostMessageTransportBackend.js.map
+
+    this.postis.listen(POSTIS_METHOD_NAME, message => this._receiveCallback(message));
+  }
+  /**
+   * Disposes the allocated resources.
+   *
+   * @returns {void}
+   */
+
+
+  dispose() {
+    this.postis.destroy();
+  }
+  /**
+   * Sends the passed message.
+   *
+   * @param {Object} message - The message to be sent.
+   * @returns {void}
+   */
+
+
+  send(message) {
+    this.postis.send({
+      method: POSTIS_METHOD_NAME,
+      params: message
+    });
+  }
+  /**
+   * Sets the callback for receiving data.
+   *
+   * @param {Function} callback - The new callback.
+   * @returns {void}
+   */
+
+
+  setReceiveCallback(callback) {
+    this._receiveCallback = callback;
+  }
+
+}

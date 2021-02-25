@@ -1,15 +1,25 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGravatarURL = void 0;
-var js_md5_1 = require("js-md5");
-function getGravatarURL(key, baseURL) {
-    if (baseURL === void 0) { baseURL = 'https://seccdn.libravatar.org/avatar/'; }
-    var urlSuffix = '?d=404&size=200';
-    var avatarKey = isValidEmail(key) ? js_md5_1.default.hex(key.trim().toLowerCase()) : key;
-    return "" + baseURL + avatarKey + urlSuffix;
+import md5 from 'js-md5';
+/**
+ * Returns the Gravatar URL of a given email id.
+ *
+ * @param {string} key - Email or id for which we need gravatar URL.
+ * @param {string} baseURL - Base Gravatar URL.
+ * @returns {string} - Gravatar URL.
+ */
+
+export function getGravatarURL(key, baseURL = 'https://seccdn.libravatar.org/avatar/') {
+  const urlSuffix = '?d=404&size=200'; // If the key is a valid email, we hash it. If it's not, we assume it's already a hashed format
+
+  const avatarKey = isValidEmail(key) ? md5.hex(key.trim().toLowerCase()) : key;
+  return `${baseURL}${avatarKey}${urlSuffix}`;
 }
-exports.getGravatarURL = getGravatarURL;
+/**
+ * Returns if the email id is valid.
+ *
+ * @param {string} email - Email id to be checked.
+ * @returns {boolean}
+ */
+
 function isValidEmail(email) {
-    return email && email.indexOf('@') > 0;
+  return email && email.indexOf('@') > 0;
 }
-//# sourceMappingURL=index.js.map

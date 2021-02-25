@@ -18,6 +18,9 @@
     "js-md5": "0.7.3"
   },
   "devDependencies": {
+    "@babel/cli": "^7.13.0",
+    "@babel/core": "^7.13.1",
+    "@babel/plugin-proposal-class-properties": "^7.13.0",
     "babel-eslint": "8.0.3",
     "eslint": "4.18.2",
     "eslint-config-jitsi": "github:jitsi/eslint-config-jitsi#1.0.2",
@@ -25,7 +28,8 @@
     "eslint-plugin-import": "2.8.0"
   },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build": "npx babel src --out-dir build --plugins=@babel/plugin-proposal-class-properties"
   },
   "pre-commit": [
     "lint",
